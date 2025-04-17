@@ -9,9 +9,14 @@ public class AnimalBehaviour : MonoBehaviour
     public float visionRange;
     public float energyToReproduce;
     public float maxEnergy;
+    // === Fight Stats ===
+    public float strength = 1f;
+    public float defense = 1f;
+    public float aggression = 0.1f; // Chance to chase other animal
+    public float timidity = 0.1f; // Chance to flee when encountering another animal
 
     // === Configuration ===
-    public float energyLossPerSecond = 1f;
+    [SerializeField] private float energyLossPerSecond;
     public float energyGainFromFood = 20f;
 
     // === Current State ===
@@ -20,15 +25,32 @@ public class AnimalBehaviour : MonoBehaviour
     [SerializeField] private float currentEnergy;
     private Vector3 moveDirection;
     private GameObject targetFood;
+    private GameObject closestAnimal; 
+
+    [SerializeField] private CircleCollider2D visionTrigger;
+    private List<GameObject> nearbyFoods = new List<GameObject>();
+    private List<GameObject> nearbyAnimals = new List<GameObject>();
+
+    private enum MovementMode { Wander, ChaseFood, ChaseAnimal, Flee } // Different modes of movement
+    [SerializeField] private MovementMode currentMode = MovementMode.Wander;
 
     void Start()
-    {
-        currentEnergy = maxEnergy / 3f; // Start with some energy
+    {   
+        if (currentEnergy == 0f)
+        {
+            currentEnergy = maxEnergy / 3f; // Start with some energy if not already set by parent
+        }
+
+        energyLossPerSecond = 1f + speed * 0.2f + visionRange * 0.1f; // Energy loss based on speed and vision range
+
+        visionTrigger.radius = visionRange; // Set the vision trigger radius for food and animals
+
         PickNewDirection();
     }
 
     void Update()
-    {
+    {   
+
         // Energy loss over time
         currentEnergy -= energyLossPerSecond * Time.deltaTime;
 
@@ -36,12 +58,6 @@ public class AnimalBehaviour : MonoBehaviour
         {
             Die();
             return;
-        }
-
-        // Try to find food if not already targeting
-        if (targetFood == null)
-        {
-            LookForFood();
         }
 
         // Move
@@ -59,29 +75,41 @@ public class AnimalBehaviour : MonoBehaviour
         WrapAround(); // Wrap around the world
     }
 
-    void Move()
+
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        if (targetFood != null)
+        Debug.Log("Trigger Entered: " + other.gameObject.name);
+        if (other.CompareTag("Food"))
         {
-            moveDirection = (targetFood.transform.position - transform.position).normalized;
+            nearbyFoods.Add(other.gameObject);
+            UpdateClosestFood();
         }
 
-        transform.position += moveDirection * speed * Time.deltaTime;
-
-        // Optional: Change direction randomly if wandering
-        if (targetFood == null && Random.value < 0.001f)
+        else if (other.CompareTag("Animal"))
         {
-            PickNewDirection();
+            nearbyAnimals.Add(other.gameObject);
+            UpdateClosestAnimal();
         }
     }
-
-    void LookForFood()
+    private void OnTriggerExit2D(Collider2D other)
     {
-        GameObject[] foods = GameObject.FindGameObjectsWithTag("Food");
-        float closestDistance = visionRange;
+        if (other.CompareTag("Food"))
+        {
+            nearbyFoods.Remove(other.gameObject);
+            UpdateClosestFood();
+        }
+        else if (other.CompareTag("Animal"))
+        {
+            nearbyAnimals.Remove(other.gameObject);
+            UpdateClosestAnimal();
+        }
+    }
+    void UpdateClosestFood()
+    {
+        float closestDistance = Mathf.Infinity;
         GameObject closest = null;
 
-        foreach (GameObject food in foods)
+        foreach (var food in nearbyFoods)
         {
             float dist = Vector3.Distance(transform.position, food.transform.position);
             if (dist < closestDistance)
@@ -92,6 +120,79 @@ public class AnimalBehaviour : MonoBehaviour
         }
 
         targetFood = closest;
+        // Only pursue food if not in a more important state
+        if (currentMode == MovementMode.Wander && targetFood != null)
+        {
+            currentMode = MovementMode.ChaseFood;
+        }
+    }
+    void UpdateClosestAnimal()
+    {
+        float closestDistance = Mathf.Infinity;
+        GameObject closest = null;
+
+        foreach (var animal in nearbyAnimals)
+        {
+
+            float dist = Vector3.Distance(transform.position, animal.transform.position);
+            if (dist < closestDistance)
+            {
+                closest = animal;
+                closestDistance = dist;
+            }
+        }
+        closestAnimal = closest;
+
+        //Fight or flight logic
+        if (closestAnimal !=null)
+        {
+            float encounterChanse = Random.value; //max 1
+            if (encounterChanse < aggression)
+            {
+                currentMode = MovementMode.ChaseAnimal;
+            }
+            else if(encounterChanse < timidity)
+            {
+                currentMode = MovementMode.Flee;
+            }else
+            {
+                currentMode = MovementMode.Wander;
+            }
+        }
+    }
+
+    void Move()
+    {
+        // Exit conditions: If targets are gone, revert to wandering
+        if (currentMode == MovementMode.ChaseFood && targetFood == null)
+            currentMode = MovementMode.Wander;
+
+        if ((currentMode == MovementMode.Flee || currentMode == MovementMode.ChaseAnimal) && closestAnimal == null)
+            currentMode = MovementMode.Wander;
+        switch (currentMode)
+        {
+            case MovementMode.Flee:
+                if (closestAnimal != null)
+                    moveDirection = (transform.position - closestAnimal.transform.position).normalized;
+                break;
+
+            case MovementMode.ChaseAnimal:
+                if (closestAnimal != null)
+                    moveDirection = (closestAnimal.transform.position - transform.position).normalized;
+                break;
+
+            case MovementMode.ChaseFood:
+                if (targetFood != null)
+                    moveDirection = (targetFood.transform.position - transform.position).normalized;
+                break;
+
+            case MovementMode.Wander:
+                if (Random.value < 0.001f)
+                    PickNewDirection();
+                break;
+        }
+
+        transform.position += moveDirection * speed * Time.deltaTime;
     }
 
     void TryEatFood()
@@ -111,16 +212,17 @@ public class AnimalBehaviour : MonoBehaviour
 
     void Reproduce()
     {
-        currentEnergy -= energyToReproduce / 2f;
+        currentEnergy -= energyToReproduce / 2f; // Consume energy for reproduction
 
         GameObject child = Instantiate(gameObject, transform.position + Random.insideUnitSphere * 1f, Quaternion.identity);
         AnimalBehaviour childBehaviour = child.GetComponent<AnimalBehaviour>();
+        childBehaviour.currentEnergy = energyToReproduce / 2f; // Start with some energy
 
         // Slight mutation
-        childBehaviour.speed = Mathf.Clamp(speed + Random.Range(-0.2f, 0.2f), 0.1f, 10f);
-        childBehaviour.visionRange = Mathf.Clamp(visionRange + Random.Range(-1f, 1f), 1f, 20f);
-        childBehaviour.energyToReproduce = Mathf.Clamp(energyToReproduce + Random.Range(-5f, 5f), 10f, 100f);
-        childBehaviour.maxEnergy = Mathf.Clamp(maxEnergy + Random.Range(-10f, 10f), 10f, 200f);
+        childBehaviour.speed = speed + Random.Range(-0.2f, 0.2f);
+        childBehaviour.visionRange = visionRange + Random.Range(-1f, 1f);
+        childBehaviour.energyToReproduce = energyToReproduce + Random.Range(-5f, 5f);
+        //childBehaviour.maxEnergy = maxEnergy + Random.Range(-10f, 10f);
     }
 
     void Die()

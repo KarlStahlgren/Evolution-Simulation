@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   plantPrefab: {fileID: 851357763036566927, guid: 27ce20a92d185994da1f39a7408833d5, type: 3}
-  spawnInterval: 1
+  spawnInterval: 0.5
   maxPlants: 100
   currentPlantCount: 0
 --- !u!4 &90519993
@@ -356,9 +356,11 @@ GameObject:
   m_Component:
   - component: {fileID: 1670138930}
   - component: {fileID: 1670138929}
+  - component: {fileID: 1670138931}
+  - component: {fileID: 1670138932}
   m_Layer: 0
   m_Name: Animal
-  m_TagString: Untagged
+  m_TagString: Animal
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -375,13 +377,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 688797c4959448d4482c49d5a52b948c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 10
+  speed: 2
   visionRange: 5
-  energyToReproduce: 51
+  energyToReproduce: 50
   maxEnergy: 100
+  strength: 1
+  defense: 1
+  aggression: 0.1
+  timidity: 0.1
   energyLossPerSecond: 1
-  energyGainFromFood: 40
+  energyGainFromFood: 20
   currentEnergy: 0
+  visionTrigger: {fileID: 1670138931}
+  currentMode: 0
 --- !u!4 &1670138930
 Transform:
   m_ObjectHideFlags: 0
@@ -398,6 +406,68 @@ Transform:
   - {fileID: 1263709071}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!58 &1670138931
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1670138928}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 1
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: 0, y: 0}
+  serializedVersion: 2
+  m_Radius: 0.5
+--- !u!50 &1670138932
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1670138928}
+  m_BodyType: 1
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 1
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
 --- !u!1 &1821611689
 GameObject:
   m_ObjectHideFlags: 0
@@ -427,8 +497,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a647cb4d88308f4dbe424ce37fc1e49, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  areaMin: {x: -17, y: -10}
-  areaMax: {x: 17, y: 10}
+  areaMin: {x: -42.5, y: -25}
+  areaMax: {x: 42.5, y: 25}
 --- !u!4 &1821611691
 Transform:
   m_ObjectHideFlags: 0
