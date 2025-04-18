@@ -152,7 +152,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   plantPrefab: {fileID: 851357763036566927, guid: 27ce20a92d185994da1f39a7408833d5, type: 3}
-  spawnInterval: 0.5
+  spawnInterval: 0.1
   maxPlants: 100
   currentPlantCount: 0
 --- !u!4 &90519993
@@ -388,8 +388,13 @@ MonoBehaviour:
   energyLossPerSecond: 1
   energyGainFromFood: 20
   currentEnergy: 0
+  targetFood: {fileID: 0}
+  closestAnimal: {fileID: 0}
   visionTrigger: {fileID: 1670138931}
+  nearbyFoods: []
+  nearbyAnimals: []
   currentMode: 0
+  isDead: 0
 --- !u!4 &1670138930
 Transform:
   m_ObjectHideFlags: 0
