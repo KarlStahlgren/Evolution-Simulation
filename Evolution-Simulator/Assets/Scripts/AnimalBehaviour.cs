@@ -1,9 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class AnimalBehaviour : MonoBehaviour
+public class AnimalBehaviour : MonoBehaviour   
 {
     // === Animal Stats ===
     public float speed;
@@ -23,7 +24,7 @@ public class AnimalBehaviour : MonoBehaviour
     // === Current State ===
     [Space]
     [Header("Current State")]
-    [SerializeField] private float currentEnergy;
+    public float currentEnergy;
     private Vector3 moveDirection;
     [SerializeField] private GameObject targetFood;
     [SerializeField] private GameObject closestAnimal; 
@@ -39,6 +40,9 @@ public class AnimalBehaviour : MonoBehaviour
 
     public bool isDead = false;//To avoid double dying in fights
 
+    // === Reproduction ===
+    public GameObject eggPrefab; 
+
     void Start()
     {   
         if (currentEnergy == 0f)
@@ -46,11 +50,13 @@ public class AnimalBehaviour : MonoBehaviour
             currentEnergy = maxEnergy / 3f; // Start with some energy if not already set by parent
         }
 
-        energyLossPerSecond = 1f + speed * 0.2f + visionRange * 0.1f; // Energy loss based on speed and vision range
+        energyLossPerSecond = (1f + MathF.Pow(speed,2) + visionRange + strength + defense) * 0.1f; // Energy loss based on stats
 
         visionTrigger.radius = visionRange; // Set the vision trigger radius for food and animals
 
         PickNewDirection();
+
+        WorldManager.Instance?.RegisterAnimal(this); // Register the animal in the ecosystem manager
     }
 
     void Update()
@@ -156,7 +162,7 @@ public class AnimalBehaviour : MonoBehaviour
         //Fight or flight logic
         if (closestAnimal !=null)
         {
-            float encounterChanse = Random.value; //max 1
+            float encounterChanse = UnityEngine.Random.value; //max 1
             if (encounterChanse < aggression)
             {
                 currentMode = MovementMode.ChaseAnimal;
@@ -201,7 +207,7 @@ public class AnimalBehaviour : MonoBehaviour
                 break;
 
             case MovementMode.Wander:
-                if (Random.value < 0.001f)
+                if (UnityEngine.Random.value < 0.001f)
                     PickNewDirection();
                 break;
         }
@@ -255,32 +261,33 @@ public class AnimalBehaviour : MonoBehaviour
 
     void PickNewDirection()
     {
-        moveDirection = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized;
+        moveDirection = new Vector3(UnityEngine.Random.Range(-1f, 1f), UnityEngine.Random.Range(-1f, 1f)).normalized;
     }
 
     void Reproduce()
     {
         currentEnergy -= energyToReproduce / 2f; // Consume energy for reproduction
 
-        GameObject child = Instantiate(gameObject, transform.position + Random.insideUnitSphere * 1f, Quaternion.identity);
-        AnimalBehaviour childBehaviour = child.GetComponent<AnimalBehaviour>();
-        childBehaviour.currentEnergy = energyToReproduce / 2f; // Start with some energy
+        GameObject child = Instantiate(eggPrefab, transform.position, Quaternion.identity);
+        EggBehaviour eggBehaviour = child.GetComponent<EggBehaviour>();
+        eggBehaviour.startEnergy = energyToReproduce / 2f; // Start with some energy
 
         // Slight mutation, cannot be negative
-        childBehaviour.speed = Mathf.Max(speed + Random.Range(-1f, 1f), 0.1f); 
-        childBehaviour.visionRange = Mathf.Max(visionRange + Random.Range(-1f, 1f), 0.1f);
-        childBehaviour.energyToReproduce = Mathf.Max(energyToReproduce + Random.Range(-5f, 5f), 0.1f);
-        childBehaviour.strength = Mathf.Max(strength + Random.Range(-1f, 1f), 0.1f);
-        childBehaviour.defense = Mathf.Max(defense + Random.Range(-1f, 1f), 0.1f);
-        childBehaviour.aggression = Mathf.Clamp(aggression + Random.Range(-0.1f, 0.1f), 0f, 1f);
-        childBehaviour.timidity = Mathf.Clamp(timidity + Random.Range(-0.1f, 0.1f), 0f, 1f);
-        //childBehaviour.maxEnergy = maxEnergy + Random.Range(-10f, 10f);
+        eggBehaviour.speed = Mathf.Max(speed + UnityEngine.Random.Range(-1f, 1f), 0.1f); 
+        eggBehaviour.visionRange = Mathf.Max(visionRange + UnityEngine.Random.Range(-1f, 1f), 0.1f);
+        eggBehaviour.energyToReproduce = Mathf.Max(energyToReproduce + UnityEngine.Random.Range(-5f, 5f), 0.1f);
+        eggBehaviour.strength = Mathf.Max(strength + UnityEngine.Random.Range(-1f, 1f), 0.1f);
+        eggBehaviour.defense = Mathf.Max(defense + UnityEngine.Random.Range(-1f, 1f), 0.1f);
+        eggBehaviour.aggression = Mathf.Clamp(aggression + UnityEngine.Random.Range(-0.1f, 0.1f), 0f, 1f);
+        eggBehaviour.timidity = Mathf.Clamp(timidity + UnityEngine.Random.Range(-0.1f, 0.1f), 0f, 1f);
     }
 
     void Die()
     {
         if (isDead) return;//Avoid double death in fights
         isDead = true;
+        WorldManager.Instance?.UnregisterAnimal(this); // Unregister the animal in the ecosystem manager
+
         Destroy(gameObject);
     }
 
